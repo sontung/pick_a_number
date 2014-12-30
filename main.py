@@ -107,6 +107,11 @@ class GameGUI:
             self.numbers = self.logic.get_numbers_for_draw()
             for index in range(len(self.numbers)):
                 self.draw_tile(self.numbers[index], index)
+            self.total_win_sur, self.total_win_rect = self.make_text("You %d : %d Com" %
+                                                                     (self.state.get_player_win(),
+                                                                      self.state.get_com_win()),
+                                                                     self.text_color, self.tile_color,
+                                                                     (self.window_width/2, self.y_margin))
             self.player_score_sur, self.player_score_rect = self.make_text("You: %d" % scores[0],
                                                                            self.text_color, self.tile_color,
                                                                            (self.x_margin, self.y_margin))
@@ -117,6 +122,7 @@ class GameGUI:
                                                              (self.x_margin, self.window_height-self.y_margin))
             self.last_sur, self.last_rect = self.make_text("last", self.text_color, self.tile_color,
                                                            (self.window_width-self.x_margin, self.window_height-self.y_margin))
+            self.display_surface.blit(self.total_win_sur, self.total_win_rect)
             self.display_surface.blit(self.first_sur, self.first_rect)
             self.display_surface.blit(self.last_sur, self.last_rect)
             self.display_surface.blit(self.player_score_sur, self.player_score_rect)
@@ -124,10 +130,12 @@ class GameGUI:
         elif state == "game over":
             scores = [self.state.get_player_score(), self.state.get_computer_score()]
             if scores[0] > scores[1]:
+                self.state.track_win(0)
                 self.result_sur, self.result_rect = self.make_text("Congratulations, you've beaten the computer with %d over %d" % (scores[0], scores[1]),
                                                                    self.text_color, self.tile_color,
                                                                    (self.window_width/2, self.window_height/2))
             elif scores[0] < scores[1]:
+                self.state.track_win(1)
                 self.result_sur, self.result_rect = self.make_text("Oops, you've lost to the computer with %d over %d. Try again!" % (scores[1], scores[0])
                                                                    ,self.text_color, self.tile_color,
                                                                    (self.window_width/2, self.window_height/2))
@@ -140,9 +148,12 @@ class GameGUI:
             self.quit_sur, self.quit_rect = self.make_text("Quit", self.text_color, self.tile_color,
                                                            (self.window_width-self.x_margin,
                                                             self.window_height-self.y_margin))
+            self.new_game_sur, self.new_game_rect = self.make_text("New game", self.text_color, self.tile_color,
+                                                                   (self.window_width/2, self.window_height-self.y_margin))
             self.display_surface.blit(self.result_sur, self.result_rect)
             self.display_surface.blit(self.play_again_sur, self.play_again_rect)
             self.display_surface.blit(self.quit_sur, self.quit_rect)
+            self.display_surface.blit(self.new_game_sur, self.new_game_rect)
 
 
 class GameLogic:
@@ -184,18 +195,45 @@ class GameState:
     """
     def __init__(self):
         self.state = "welcome"
+        self.already_count_win = False
         self.already_over = False
         self.difficulty = 0.5
         self.player = 0
         self.computer = 0
+        self.player_win = 0
+        self.com_win = 0
         self.current_player = 0 # 0 for human, 1 for computer
 
+    def new_game(self):
+        self.already_count_win = False
+        self.already_over = False
+        self.player = 0
+        self.computer = 0
+        self.current_player = 0
+
+    def track_win(self, player):
+        if not self.already_count_win:
+            self.already_count_win = True
+            if player == 0:
+                self.player_win += 1
+            else:
+                self.com_win += 1
+
+    def get_com_win(self):
+        return self.com_win
+
+    def get_player_win(self):
+        return self.player_win
+
     def start_again(self):
+        self.already_count_win = False
         self.state = "welcome"
         self.already_over = False
         self.difficulty = 0.5
         self.player = 0
         self.computer = 0
+        self.player_win = 0
+        self.com_win = 0
         self.current_player = 0 # 0 for human, 1 for computer
 
     def get_already_over(self):
@@ -274,12 +312,16 @@ class EventLogic:
                             self._game_state.increment_score(0, self._game_logic.pick_number(-1))
                             self._game_state.set_current_player(1)
                 elif self._game_state.get_state() == "game over":
-                    if self._game_gui.play_again_rect.collidepoint(event.pos):
+                    if self._game_gui.new_game_rect.collidepoint(event.pos):
                         self._game_state.set_state("welcome")
                         self._game_logic.start_again()
                         self._game_state.start_again()
                     elif self._game_gui.quit_rect.collidepoint(event.pos):
                         self.quit()
+                    elif self._game_gui.play_again_rect.collidepoint(event.pos):
+                        self._game_state.new_game()
+                        self._game_logic.start_again()
+                        self._game_state.set_state("new game")
             elif event.type == KEYUP:
                 if event.key == K_ESCAPE:
                     self.quit()
@@ -317,6 +359,7 @@ if __name__ == "__main__":
         game_gui.draw(game_state.get_state())
         game_event_handler.event_handler()
         pygame.display.update()
+        print game_state.com_win
         if game_state.get_current_player() == 1:
             if len(game_logic.get_numbers_left()) > 0:
                 computer_choice = choose_a_pick(game_logic.get_numbers_left())
