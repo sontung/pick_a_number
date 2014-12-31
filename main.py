@@ -1,7 +1,9 @@
 import random
 import pygame
 import sys
+import sound
 from pygame.locals import *
+from sound.background_sound import music_funcs as music
 
 
 class GameGUI:
@@ -270,11 +272,26 @@ class GameState:
         return self.computer
 
 
+class Sound:
+    def __init__(self):
+        self.music = music
+
+    def play_music(self):
+        self.music[0]("sound/background1.mid", "bg_music")
+
+    def stop_music(self):
+        self.music[1]()
+
+    def play_beep(self):
+        self.music[0]("sound/beep1.ogg", "click")
+
+
 class EventLogic:
-    def __init__(self, _game_state, _game_gui, _game_logic):
+    def __init__(self, _game_state, _game_gui, _game_logic, _sound):
         self._game_state = _game_state
         self._game_gui = _game_gui
         self._game_logic = _game_logic
+        self._sound = _sound
 
     def quit(self):
         pygame.quit()
@@ -284,6 +301,7 @@ class EventLogic:
         for event in pygame.event.get():
             if event.type == MOUSEBUTTONUP:
                 if self._game_state.get_state() == "welcome":
+                    self._sound.stop_music()
                     if self._game_gui.new_rect.collidepoint(event.pos):
                         self._game_state.set_state("new game")
                     elif self._game_gui.setting_rect.collidepoint(event.pos):
@@ -306,24 +324,30 @@ class EventLogic:
                 elif self._game_state.get_state() == "new game":
                     if self._game_state.get_current_player() == 0:
                         if self._game_gui.first_rect.collidepoint(event.pos):
+                            self._sound.play_beep()
                             self._game_state.increment_score(0, self._game_logic.pick_number(0))
                             self._game_state.set_current_player(1)
                         elif self._game_gui.last_rect.collidepoint(event.pos):
+                            self._sound.play_beep()
                             self._game_state.increment_score(0, self._game_logic.pick_number(-1))
                             self._game_state.set_current_player(1)
                 elif self._game_state.get_state() == "game over":
                     if self._game_gui.new_game_rect.collidepoint(event.pos):
+                        self._sound.play_beep()
                         self._game_state.set_state("welcome")
                         self._game_logic.start_again()
                         self._game_state.start_again()
                     elif self._game_gui.quit_rect.collidepoint(event.pos):
+                        self._sound.play_beep()
                         self.quit()
                     elif self._game_gui.play_again_rect.collidepoint(event.pos):
+                        self._sound.play_beep()
                         self._game_state.new_game()
                         self._game_logic.start_again()
                         self._game_state.set_state("new game")
             elif event.type == KEYUP:
                 if event.key == K_ESCAPE:
+                    self._sound.play_beep()
                     self.quit()
 
 
@@ -351,15 +375,16 @@ def choose_a_pick(numbers_left):
 
 
 if __name__ == "__main__":
+    sound_game = Sound()
     game_logic = GameLogic()
     game_state = GameState()
     game_gui = GameGUI(game_logic, game_state)
-    game_event_handler = EventLogic(game_state, game_gui, game_logic)
+    game_event_handler = EventLogic(game_state, game_gui, game_logic, sound_game)
+    sound_game.play_music()
     while True:
         game_gui.draw(game_state.get_state())
         game_event_handler.event_handler()
         pygame.display.update()
-        print game_state.com_win
         if game_state.get_current_player() == 1:
             if len(game_logic.get_numbers_left()) > 0:
                 computer_choice = choose_a_pick(game_logic.get_numbers_left())
