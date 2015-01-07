@@ -28,14 +28,21 @@ class GameGUI:
         self.display_surface = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption('Pick A Number')
         self.font = pygame.font.Font('GatsbyFLF-Bold.ttf', self.font_size)
+        self.pos = (self.window_width/2, self.window_height/2) # for configuring game difficulty
 
     def make_text(self, text, color, bg_color, center):
+        """
+        Make a text object for drawing
+        """
         textSurf = self.font.render(text, True, color, bg_color)
         textRect = textSurf.get_rect()
         textRect.center = center
         return (textSurf, textRect)
 
     def draw_tile(self, number, index):
+        """
+        Draw the number tiles
+        """
         size = 40
         space = 1
         position = (self.x_margin+(size+space)*index, self.y_margin*2)
@@ -45,7 +52,16 @@ class GameGUI:
         text_rect.center = (position[0]+size/2, position[1]+size/2)
         self.display_surface.blit(text_sur, text_rect)
 
+    def configure_difficulty(self, pos):
+        """
+        Changing position of the circle indicating new difficulty
+        """
+        self.pos = pos
+
     def draw(self, state):
+        """
+        Draw the scene
+        """
         self.display_surface.fill(self.bg_color)
         if state == "welcome":
             self.setting_sur, self.setting_rect = self.make_text('Settings', self.text_color, self.tile_color,
@@ -99,11 +115,11 @@ class GameGUI:
             self.back_sur, self.back_rect = self.make_text("Back", self.text_color, self.tile_color,
                                                            (self.window_width-60, self.window_height-650))
             self.display_surface.blit(self.back_sur, self.back_rect)
-            pygame.draw.line(self.display_surface, self.colors["white"],
-                             (self.window_width/4, self.window_height/2),
-                             (self.window_width*3/4, self.window_height/2), 5)
+            self.difficulty_line = pygame.draw.line(self.display_surface, self.colors["white"],
+                                                    (self.window_width/4, self.window_height/2),
+                                                    (self.window_width*3/4, self.window_height/2), 5)
             pygame.draw.circle(self.display_surface, self.colors["red"],
-                               (self.window_width/2, self.window_height/2), 15)
+                               tuple(self.pos), 15)
         elif state == "new game":
             scores = [self.state.get_player_score(), self.state.get_computer_score()]
             self.numbers = self.logic.get_numbers_for_draw()
@@ -167,6 +183,9 @@ class GameLogic:
         self.list_of_numbers_for_draw = self.list_of_numbers[:]
 
     def start_again(self):
+        """
+        Reset the game
+        """
         self.list_of_numbers = range(1, 26)
         self.first_removed = 0
         self.last_removed = -1
@@ -207,6 +226,10 @@ class GameState:
         self.current_player = 0 # 0 for human, 1 for computer
 
     def new_game(self):
+        """
+        Reset the game states for new round
+        :return:
+        """
         self.already_count_win = False
         self.already_over = False
         self.player = 0
@@ -214,6 +237,11 @@ class GameState:
         self.current_player = 0
 
     def track_win(self, player):
+        """
+        Track the win of player and computer
+        :param player:
+        :return:
+        """
         if not self.already_count_win:
             self.already_count_win = True
             if player == 0:
@@ -228,6 +256,10 @@ class GameState:
         return self.player_win
 
     def start_again(self):
+        """
+        Reset for a new game
+        :return:
+        """
         self.already_count_win = False
         self.state = "welcome"
         self.already_over = False
@@ -246,6 +278,9 @@ class GameState:
 
     def get_difficulty(self):
         return self.difficulty
+
+    def set_difficulty(self, val):
+        self.difficulty = val
 
     def increment_score(self, player, number):
         if player == 0:
@@ -301,9 +336,9 @@ class EventLogic:
         for event in pygame.event.get():
             if event.type == MOUSEBUTTONUP:
                 if self._game_state.get_state() == "welcome":
-                    self._sound.stop_music()
                     if self._game_gui.new_rect.collidepoint(event.pos):
                         self._game_state.set_state("new game")
+                        self._sound.stop_music()
                     elif self._game_gui.setting_rect.collidepoint(event.pos):
                         self._game_state.set_state("settings")
                     elif self._game_gui.quit_rect.collidepoint(event.pos):
@@ -315,6 +350,10 @@ class EventLogic:
                 elif self._game_state.get_state() == "settings":
                     if self._game_gui.back_rect.collidepoint(event.pos):
                         self._game_state.set_state("welcome")
+                    elif self._game_gui.difficulty_line.collidepoint(event.pos):
+                        self._game_gui.configure_difficulty(event.pos)
+                        self._game_state.set_difficulty((event.pos[0]-self._game_gui.window_width/4)*2/float(self._game_gui.window_width))
+                        print self._game_state.get_difficulty()
                 elif self._game_state.get_state() == "help":
                     if self._game_gui.back_rect.collidepoint(event.pos):
                         self._game_state.set_state("welcome")
@@ -335,6 +374,7 @@ class EventLogic:
                     if self._game_gui.new_game_rect.collidepoint(event.pos):
                         self._sound.play_beep()
                         self._game_state.set_state("welcome")
+                        self._sound.play_music()
                         self._game_logic.start_again()
                         self._game_state.start_again()
                     elif self._game_gui.quit_rect.collidepoint(event.pos):
@@ -345,6 +385,8 @@ class EventLogic:
                         self._game_state.new_game()
                         self._game_logic.start_again()
                         self._game_state.set_state("new game")
+            elif event.type == pygame.QUIT:
+                self.quit()
             elif event.type == KEYUP:
                 if event.key == K_ESCAPE:
                     self._sound.play_beep()
@@ -352,10 +394,20 @@ class EventLogic:
 
 
 def key_for_min(pick):
+    """
+    Helper function for choose_a_pick
+    :param pick:
+    :return:
+    """
     return pick[1][1]
 
 
 def choose_a_pick(numbers_left):
+    """
+    AI for choosing a number
+    :param numbers_left:
+    :return:
+    """
     if len(numbers_left) <= 3:
         if numbers_left[0] > numbers_left[-1]:
             return 0, numbers_left[0]
@@ -374,6 +426,20 @@ def choose_a_pick(numbers_left):
         return best_pick[0], numbers_left[best_pick[0]]
 
 
+def choose_a_pick_naive(numbers_left):
+    """
+    Choose any larger number
+    :param numbers_left:
+    :return:
+    """
+    if numbers_left[0] > numbers_left[-1]:
+        return 0, numbers_left[0]
+    elif numbers_left[-1] > numbers_left[0]:
+        return -1, numbers_left[-1]
+    else:
+        return 0, numbers_left[0]
+
+
 if __name__ == "__main__":
     sound_game = Sound()
     game_logic = GameLogic()
@@ -387,7 +453,10 @@ if __name__ == "__main__":
         pygame.display.update()
         if game_state.get_current_player() == 1:
             if len(game_logic.get_numbers_left()) > 0:
-                computer_choice = choose_a_pick(game_logic.get_numbers_left())
+                if random.random() > game_state.get_difficulty():
+                    computer_choice = choose_a_pick_naive(game_logic.get_numbers_left())
+                else:
+                    computer_choice = choose_a_pick(game_logic.get_numbers_left())
                 game_state.increment_score(1, computer_choice[1])
                 game_logic.pick_number(computer_choice[0])
                 game_state.set_current_player(0)
