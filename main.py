@@ -18,13 +18,17 @@ class GameGUI:
         self.x_margin = 78
         self.y_margin = 150
         self.colors = {"white": (255, 255, 255),
-                       "red": (255, 0, 255),
+                       "navy": (0, 0, 128),
+                       "red": (139, 0, 0),
                        "blue": (0, 0, 255),
                        "dark": (3, 54, 73),
-                       "green": (0, 204, 0)}
-        self.tile_color = self.colors["green"]
-        self.text_color = self.colors["white"]
-        self.bg_color = self.colors["dark"]
+                       "green": (0, 128, 0),
+                       "light green": (118, 238, 0),
+                       "turquoise": (0, 229, 238)}
+        self.tile_color_for_numbers = self.colors["light green"]
+        self.text_color = self.colors["navy"]
+        self.bg_color = self.colors["turquoise"]
+        self.tile_color = self.bg_color
         self.display_surface = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption('Pick A Number')
         self.font = pygame.font.Font('GatsbyFLF-Bold.ttf', self.font_size)
@@ -46,7 +50,12 @@ class GameGUI:
         size = 40
         space = 1
         position = (self.x_margin+(size+space)*index, self.y_margin*2)
-        pygame.draw.rect(self.display_surface, self.tile_color, (position[0], position[1], size, size))
+        self.logic.update_fl()
+        print self.logic.first_last
+        if index in self.logic.first_last:
+            pygame.draw.rect(self.display_surface, self.colors["green"], (position[0], position[1], size, size))
+        else:
+            pygame.draw.rect(self.display_surface, self.tile_color_for_numbers, (position[0], position[1], size, size))
         text_sur = self.font.render(str(number), True, self.text_color)
         text_rect = text_sur.get_rect()
         text_rect.center = (position[0]+size/2, position[1]+size/2)
@@ -84,7 +93,7 @@ class GameGUI:
             for i in range(9):
                 instructions = sys.stdin.readline()
                 self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.text_color,
-                                                                               self.colors["dark"],
+                                                                               self.tile_color,
                                                                                (self.window_width/2,
                                                                                 self.window_height/2-120+i*30))
                 self.display_surface.blit(self.instructions_sur, self.instructions_rect)
@@ -97,14 +106,14 @@ class GameGUI:
                 if i == 0:
                     instructions = sys.stdin.readline()
                     self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.colors["red"],
-                                                                                   self.colors["dark"],
+                                                                                   self.tile_color,
                                                                                    (self.window_width/2,
                                                                                     self.window_height/2-180+i*30))
                     self.display_surface.blit(self.instructions_sur, self.instructions_rect)
                 else:
                     instructions = sys.stdin.readline()
                     self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.text_color
-                                                                                   ,self.colors["dark"],
+                                                                                   ,self.tile_color,
                                                                                    (self.window_width/2,
                                                                                     self.window_height/2-120+i*30))
                     self.display_surface.blit(self.instructions_sur, self.instructions_rect)
@@ -112,9 +121,14 @@ class GameGUI:
                                                            (self.window_width-60, self.window_height-650))
             self.display_surface.blit(self.back_sur, self.back_rect)
         elif state == "settings":
+            self.difficulty_sur, self.difficilty_rect = self.make_text("Difficulty: %s%%" %
+                                                                       str(self.state.get_difficulty()*100)[0:2],
+                                                                       self.text_color, self.tile_color,
+                                                                       (self.window_width/2, self.window_height/2-100))
             self.back_sur, self.back_rect = self.make_text("Back", self.text_color, self.tile_color,
                                                            (self.window_width-60, self.window_height-650))
             self.display_surface.blit(self.back_sur, self.back_rect)
+            self.display_surface.blit(self.difficulty_sur, self.difficilty_rect)
             self.difficulty_line = pygame.draw.line(self.display_surface, self.colors["white"],
                                                     (self.window_width/4, self.window_height/2),
                                                     (self.window_width*3/4, self.window_height/2), 5)
@@ -177,8 +191,9 @@ class GameGUI:
 class GameLogic:
     def __init__(self):
         self.list_of_numbers = range(1, 26)
-        self.first_removed = 0
-        self.last_removed = -1
+        self.first_removed = 0  # for drawing
+        self.last_removed = len(self.list_of_numbers)-1  # we can keep track of which numbers have been removed
+        self.first_last = [self.first_removed, self.last_removed]  # to highlight the tiles to choose
         random.shuffle(self.list_of_numbers)
         self.list_of_numbers_for_draw = self.list_of_numbers[:]
 
@@ -188,9 +203,16 @@ class GameLogic:
         """
         self.list_of_numbers = range(1, 26)
         self.first_removed = 0
-        self.last_removed = -1
+        self.last_removed = len(self.list_of_numbers)-1
         random.shuffle(self.list_of_numbers)
         self.list_of_numbers_for_draw = self.list_of_numbers[:]
+
+    def update_fl(self):
+        """
+        Update the first_last list according to first_removed and last_removed,
+        so we can highlight the tiles to be chosen
+        """
+        self.first_last = [self.first_removed, self.last_removed]
 
     def pick_number(self, index):
         target = self.list_of_numbers[index]
