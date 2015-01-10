@@ -9,6 +9,7 @@ from sound.background_sound import music_funcs as music
 class GameGUI:
     def __init__(self, _game_logic, _game_state):
         pygame.init()
+        self.buttons = []  # keeping track of number of buttons according to each scene (state)
         self.state = _game_state
         self.logic = _game_logic
         self.fps_clock = pygame.time.Clock()
@@ -18,30 +19,35 @@ class GameGUI:
         self.x_margin = 78
         self.y_margin = 150
         self.colors = {"white": (255, 255, 255),
+                       "black": (41, 36, 33),
                        "navy": (0, 0, 128),
                        "red": (139, 0, 0),
                        "blue": (0, 0, 255),
                        "dark": (3, 54, 73),
+                       "yellow": (255, 255, 0),
+                       "turquoise blue": (0, 199, 140),
                        "green": (0, 128, 0),
                        "light green": (118, 238, 0),
                        "turquoise": (0, 229, 238)}
         self.tile_color_for_numbers = self.colors["light green"]
-        self.text_color = self.colors["navy"]
+        self.text_color_for_numbers = self.colors["navy"]
+        self.text_color = self.colors["red"]
         self.bg_color = self.colors["turquoise"]
         self.tile_color = self.bg_color
         self.display_surface = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption('Pick A Number')
-        self.font = pygame.font.Font('GatsbyFLF-Bold.ttf', self.font_size)
-        self.pos = (self.window_width/2, self.window_height/2) # for configuring game difficulty
+        self.font = pygame.font.Font('Cutie Patootie Skinny.ttf', self.font_size)
+        self.font_bold = pygame.font.Font('Cutie Patootie.ttf', self.font_size)
+        self.pos = (self.window_width/2, self.window_height/2)  # for configuring game difficulty
 
     def make_text(self, text, color, bg_color, center):
         """
         Make a text object for drawing
         """
-        textSurf = self.font.render(text, True, color, bg_color)
-        textRect = textSurf.get_rect()
-        textRect.center = center
-        return (textSurf, textRect)
+        text_surf = self.font.render(text, True, color, bg_color)
+        text_rect = text_surf.get_rect()
+        text_rect.center = center
+        return text_surf, text_rect
 
     def draw_tile(self, number, index):
         """
@@ -51,7 +57,6 @@ class GameGUI:
         space = 1
         position = (self.x_margin+(size+space)*index, self.y_margin*2)
         self.logic.update_fl()
-        print self.logic.first_last
         if index in self.logic.first_last:
             pygame.draw.rect(self.display_surface, self.colors["green"], (position[0], position[1], size, size))
         else:
@@ -73,61 +78,64 @@ class GameGUI:
         """
         self.display_surface.fill(self.bg_color)
         if state == "welcome":
-            self.setting_sur, self.setting_rect = self.make_text('Settings', self.text_color, self.tile_color,
-                                                                 (self.window_width/2, self.window_height/2))
-            self.new_sur, self.new_rect = self.make_text('New Game', self.text_color, self.tile_color,
-                                                         (self.window_width/2, self.window_height/2-60))
-            self.quit_sur, self.quit_rect = self.make_text('Quit', self.text_color, self.tile_color,
-                                                           (self.window_width/2, self.window_height/2+180))
-            self.help_sur, self.help_rect = self.make_text('How to play', self.text_color, self.tile_color,
-                                                           (self.window_width/2, self.window_height/2+60))
-            self.author_sur, self.author_rect = self.make_text('About the author', self.text_color, self.tile_color,
-                                                               (self.window_width/2, self.window_height/2+120))
-            self.display_surface.blit(self.setting_sur, self.setting_rect)
-            self.display_surface.blit(self.new_sur, self.new_rect)
-            self.display_surface.blit(self.quit_sur, self.quit_rect)
-            self.display_surface.blit(self.help_sur, self.help_rect)
-            self.display_surface.blit(self.author_sur, self.author_rect)
+            self.setting = Button('Settings', self.text_color, self.tile_color,
+                                  (self.window_width/2, self.window_height/2), self)
+            self.new = Button('New Game', self.text_color, self.tile_color,
+                              (self.window_width/2, self.window_height/2-60), self)
+            self.quit = Button('Quit', self.text_color, self.tile_color,
+                               (self.window_width/2, self.window_height/2+180), self)
+            self.help = Button('How to play', self.text_color, self.tile_color,
+                               (self.window_width/2, self.window_height/2+60), self)
+            self.author = Button('About the author', self.text_color, self.tile_color,
+                                 (self.window_width/2, self.window_height/2+120), self)
+            self.buttons = [self.new, self.setting, self.quit, self.help, self.author]
+            self.display_surface.blit(self.setting.get_sr()[0], self.setting.get_sr()[1])
+            self.display_surface.blit(self.new.get_sr()[0], self.new.get_sr()[1])
+            self.display_surface.blit(self.quit.get_sr()[0], self.quit.get_sr()[1])
+            self.display_surface.blit(self.help.get_sr()[0], self.help.get_sr()[1])
+            self.display_surface.blit(self.author.get_sr()[0], self.author.get_sr()[1])
         elif state == "help":
             sys.stdin = open("instruction.txt")
             for i in range(9):
-                instructions = sys.stdin.readline()
-                self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.text_color,
+                instructions = sys.stdin.readline().strip()
+                self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.colors["black"],
                                                                                self.tile_color,
                                                                                (self.window_width/2,
-                                                                                self.window_height/2-120+i*30))
+                                                                                self.window_height/2-120+i*35))
                 self.display_surface.blit(self.instructions_sur, self.instructions_rect)
-            self.back_sur, self.back_rect = self.make_text("Back", self.text_color, self.tile_color,
-                                                           (self.window_width-60, self.window_height-650))
-            self.display_surface.blit(self.back_sur, self.back_rect)
+            self.back = Button("Back", self.text_color, self.tile_color,
+                               (self.window_width-60, self.window_height-650), self)
+            self.buttons = [self.back]
+            self.display_surface.blit(self.back.get_sr()[0], self.back.get_sr()[1])
         elif state == "author":
             sys.stdin = open("author.txt")
             for i in range(8):
                 if i == 0:
-                    instructions = sys.stdin.readline()
-                    self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.colors["red"],
+                    instructions = sys.stdin.readline().strip()
+                    self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.colors["green"],
                                                                                    self.tile_color,
                                                                                    (self.window_width/2,
-                                                                                    self.window_height/2-180+i*30))
+                                                                                    self.window_height/2-180+i*35))
                     self.display_surface.blit(self.instructions_sur, self.instructions_rect)
                 else:
-                    instructions = sys.stdin.readline()
-                    self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.text_color
+                    instructions = sys.stdin.readline().strip()
+                    self.instructions_sur, self.instructions_rect = self.make_text(instructions, self.colors["black"]
                                                                                    ,self.tile_color,
                                                                                    (self.window_width/2,
-                                                                                    self.window_height/2-120+i*30))
+                                                                                    self.window_height/2-120+i*35))
                     self.display_surface.blit(self.instructions_sur, self.instructions_rect)
-            self.back_sur, self.back_rect = self.make_text("Back", self.text_color, self.tile_color,
-                                                           (self.window_width-60, self.window_height-650))
-            self.display_surface.blit(self.back_sur, self.back_rect)
+            self.back = Button("Back", self.text_color, self.tile_color, (self.window_width-60, self.window_height-650), self)
+            self.buttons = [self.back]
+            self.display_surface.blit(self.back.get_sr()[0], self.back.get_sr()[1])
         elif state == "settings":
             self.difficulty_sur, self.difficilty_rect = self.make_text("Difficulty: %s%%" %
                                                                        str(self.state.get_difficulty()*100)[0:2],
                                                                        self.text_color, self.tile_color,
                                                                        (self.window_width/2, self.window_height/2-100))
-            self.back_sur, self.back_rect = self.make_text("Back", self.text_color, self.tile_color,
-                                                           (self.window_width-60, self.window_height-650))
-            self.display_surface.blit(self.back_sur, self.back_rect)
+            self.back = Button("Back", self.text_color, self.tile_color,
+                               (self.window_width-60, self.window_height-650), self)
+            self.buttons = [self.back]
+            self.display_surface.blit(self.back.get_sr()[0], self.back.get_sr()[1])
             self.display_surface.blit(self.difficulty_sur, self.difficilty_rect)
             self.difficulty_line = pygame.draw.line(self.display_surface, self.colors["white"],
                                                     (self.window_width/4, self.window_height/2),
@@ -149,43 +157,97 @@ class GameGUI:
                                                                            (self.x_margin, self.y_margin))
             self.computer_score_sur, self.computer_score_rect = self.make_text("Computer: %d" % scores[1],
                                                                                self.text_color, self.tile_color,
-                                                                               (self.window_width-self.x_margin, self.y_margin))
-            self.first_sur, self.first_rect = self.make_text("first", self.text_color, self.tile_color,
-                                                             (self.x_margin, self.window_height-self.y_margin))
-            self.last_sur, self.last_rect = self.make_text("last", self.text_color, self.tile_color,
-                                                           (self.window_width-self.x_margin, self.window_height-self.y_margin))
+                                                                               (self.window_width-self.x_margin,
+                                                                                self.y_margin))
+            self.first = Button("first", self.text_color, self.tile_color,
+                                (self.x_margin, self.window_height-self.y_margin), self)
+            self.last = Button("last", self.text_color, self.tile_color,
+                               (self.window_width-self.x_margin, self.window_height-self.y_margin), self)
+            self.back = Button("Back", self.text_color, self.tile_color,
+                               (self.window_width-60, self.window_height-650), self)
+            self.buttons = [self.first, self.last, self.back]
+            self.display_surface.blit(self.back.get_sr()[0], self.back.get_sr()[1])
+            self.display_surface.blit(self.first.get_sr()[0], self.first.get_sr()[1])
+            self.display_surface.blit(self.last.get_sr()[0], self.last.get_sr()[1])
             self.display_surface.blit(self.total_win_sur, self.total_win_rect)
-            self.display_surface.blit(self.first_sur, self.first_rect)
-            self.display_surface.blit(self.last_sur, self.last_rect)
             self.display_surface.blit(self.player_score_sur, self.player_score_rect)
             self.display_surface.blit(self.computer_score_sur, self.computer_score_rect)
         elif state == "game over":
             scores = [self.state.get_player_score(), self.state.get_computer_score()]
             if scores[0] > scores[1]:
                 self.state.track_win(0)
-                self.result_sur, self.result_rect = self.make_text("Congratulations, you've beaten the computer with %d over %d" % (scores[0], scores[1]),
+                self.result_sur, self.result_rect = self.make_text("Congratulations, you've beaten the computer with %d over %d" %
+                                                                   (scores[0], scores[1]),
                                                                    self.text_color, self.tile_color,
                                                                    (self.window_width/2, self.window_height/2))
             elif scores[0] < scores[1]:
                 self.state.track_win(1)
-                self.result_sur, self.result_rect = self.make_text("Oops, you've lost to the computer with %d over %d. Try again!" % (scores[1], scores[0])
-                                                                   ,self.text_color, self.tile_color,
-                                                                   (self.window_width/2, self.window_height/2))
-            else:
-                self.result_sur, self.result_rect = self.make_text("Good try, you've made a draw to the computer with %d and %d" % (scores[0], scores[1]),
+                self.result_sur, self.result_rect = self.make_text("Oops, you've lost to the computer with %d over %d. Try again!"
+                                                                   % (scores[1], scores[0]),
                                                                    self.text_color, self.tile_color,
                                                                    (self.window_width/2, self.window_height/2))
-            self.play_again_sur, self.play_again_rect = self.make_text("Play again", self.text_color, self.tile_color,
-                                                                       (self.x_margin, self.window_height-self.y_margin))
-            self.quit_sur, self.quit_rect = self.make_text("Quit", self.text_color, self.tile_color,
-                                                           (self.window_width-self.x_margin,
-                                                            self.window_height-self.y_margin))
-            self.new_game_sur, self.new_game_rect = self.make_text("New game", self.text_color, self.tile_color,
-                                                                   (self.window_width/2, self.window_height-self.y_margin))
+            else:
+                self.result_sur, self.result_rect = self.make_text("Good try, you've made a draw to the computer with %d and %d" %
+                                                                   (scores[0], scores[1]),
+                                                                   self.text_color, self.tile_color,
+                                                                   (self.window_width/2, self.window_height/2))
+            self.play_again = Button("Play again", self.text_color, self.tile_color,
+                                     (self.x_margin, self.window_height-self.y_margin), self)
+            self.quit = Button("Quit", self.text_color, self.tile_color, (self.window_width-self.x_margin,
+                                                                          self.window_height-self.y_margin), self)
+            self.new_game = Button("New game", self.text_color, self.tile_color,
+                                   (self.window_width/2, self.window_height-self.y_margin), self)
+            self.buttons = []
+            self.buttons.extend([self.play_again, self.quit, self.new_game])
             self.display_surface.blit(self.result_sur, self.result_rect)
-            self.display_surface.blit(self.play_again_sur, self.play_again_rect)
-            self.display_surface.blit(self.quit_sur, self.quit_rect)
-            self.display_surface.blit(self.new_game_sur, self.new_game_rect)
+            self.display_surface.blit(self.play_again.get_sr()[0], self.play_again.get_sr()[1])
+            self.display_surface.blit(self.quit.get_sr()[0], self.quit.get_sr()[1])
+            self.display_surface.blit(self.new_game.get_sr()[0], self.new_game.get_sr()[1])
+
+
+class Button:
+    def __init__(self, text, color, bg_color, center, _game_gui):
+        self.gui = _game_gui
+        self.text = text
+        self.center = center
+        self.color = color
+        self.bg_color = bg_color
+        self.bold = False
+        self.font = self.gui.font
+        self.font_bold = self.gui.font_bold
+        self.surf = self.font.render(text, True, color, bg_color)
+        self.rect = self.surf.get_rect()
+        self.rect.center = self.center
+
+    def make_text(self):
+        """
+        Make a text object for drawing
+        """
+        if not self.bold:
+            text_surf = self.font.render(self.text, True, self.color, self.bg_color)
+        else:
+            text_surf = self.font_bold.render(self.text, True, self.color, self.bg_color)
+        text_rect = text_surf.get_rect()
+        text_rect.center = self.center
+        return text_surf, text_rect
+
+    def get_rect(self):
+        return self.rect
+
+    def get_sr(self):
+        return self.surf, self.rect
+
+    def update_sr(self):
+        self.surf, self.rect = self.make_text()
+
+    def set_bold(self, pos):
+        """
+        Highlight the button when the user hovers mouse over
+        """
+        if self.rect.collidepoint(pos):
+            self.bold = True
+            self.update_sr()
+            self.gui.display_surface.blit(self.surf, self.rect)
 
 
 class GameLogic:
@@ -355,64 +417,71 @@ class EventLogic:
         sys.exit()
 
     def event_handler(self):
-        for event in pygame.event.get():
-            if event.type == MOUSEBUTTONUP:
-                if self._game_state.get_state() == "welcome":
-                    if self._game_gui.new_rect.collidepoint(event.pos):
-                        self._game_state.set_state("new game")
-                        self._sound.stop_music()
-                    elif self._game_gui.setting_rect.collidepoint(event.pos):
-                        self._game_state.set_state("settings")
-                    elif self._game_gui.quit_rect.collidepoint(event.pos):
-                        self.quit()
-                    elif self._game_gui.help_rect.collidepoint(event.pos):
-                        self._game_state.set_state("help")
-                    elif self._game_gui.author_rect.collidepoint(event.pos):
-                        self._game_state.set_state("author")
-                elif self._game_state.get_state() == "settings":
-                    if self._game_gui.back_rect.collidepoint(event.pos):
-                        self._game_state.set_state("welcome")
-                    elif self._game_gui.difficulty_line.collidepoint(event.pos):
-                        self._game_gui.configure_difficulty(event.pos)
-                        self._game_state.set_difficulty((event.pos[0]-self._game_gui.window_width/4)*2/float(self._game_gui.window_width))
-                        print self._game_state.get_difficulty()
-                elif self._game_state.get_state() == "help":
-                    if self._game_gui.back_rect.collidepoint(event.pos):
-                        self._game_state.set_state("welcome")
-                elif self._game_state.get_state() == "author":
-                    if self._game_gui.back_rect.collidepoint(event.pos):
-                        self._game_state.set_state("welcome")
-                elif self._game_state.get_state() == "new game":
-                    if self._game_state.get_current_player() == 0:
-                        if self._game_gui.first_rect.collidepoint(event.pos):
-                            self._sound.play_beep()
-                            self._game_state.increment_score(0, self._game_logic.pick_number(0))
-                            self._game_state.set_current_player(1)
-                        elif self._game_gui.last_rect.collidepoint(event.pos):
-                            self._sound.play_beep()
-                            self._game_state.increment_score(0, self._game_logic.pick_number(-1))
-                            self._game_state.set_current_player(1)
-                elif self._game_state.get_state() == "game over":
-                    if self._game_gui.new_game_rect.collidepoint(event.pos):
+        event = pygame.event.poll()
+        if event.type == MOUSEBUTTONUP:
+            if self._game_state.get_state() == "welcome":
+                if self._game_gui.new.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("new game")
+                    self._sound.stop_music()
+                elif self._game_gui.setting.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("settings")
+                elif self._game_gui.quit.get_rect().collidepoint(event.pos):
+                    self.quit()
+                elif self._game_gui.help.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("help")
+                elif self._game_gui.author.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("author")
+            elif self._game_state.get_state() == "settings":
+                if self._game_gui.back.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("welcome")
+                elif self._game_gui.difficulty_line.collidepoint(event.pos):
+                    self._game_gui.configure_difficulty(event.pos)
+                    self._game_state.set_difficulty((event.pos[0]-self._game_gui.window_width/4)*2/float(self._game_gui.window_width))
+            elif self._game_state.get_state() == "help":
+                if self._game_gui.back.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("welcome")
+            elif self._game_state.get_state() == "author":
+                if self._game_gui.back.get_rect().collidepoint(event.pos):
+                    self._game_state.set_state("welcome")
+            elif self._game_state.get_state() == "new game":
+                if self._game_state.get_current_player() == 0:
+                    if self._game_gui.first.get_rect().collidepoint(event.pos):
                         self._sound.play_beep()
+                        self._game_state.increment_score(0, self._game_logic.pick_number(0))
+                        self._game_state.set_current_player(1)
+                    elif self._game_gui.last.get_rect().collidepoint(event.pos):
+                        self._sound.play_beep()
+                        self._game_state.increment_score(0, self._game_logic.pick_number(-1))
+                        self._game_state.set_current_player(1)
+                    elif self._game_gui.back.get_rect().collidepoint(event.pos):
                         self._game_state.set_state("welcome")
                         self._sound.play_music()
                         self._game_logic.start_again()
                         self._game_state.start_again()
-                    elif self._game_gui.quit_rect.collidepoint(event.pos):
-                        self._sound.play_beep()
-                        self.quit()
-                    elif self._game_gui.play_again_rect.collidepoint(event.pos):
-                        self._sound.play_beep()
-                        self._game_state.new_game()
-                        self._game_logic.start_again()
-                        self._game_state.set_state("new game")
-            elif event.type == pygame.QUIT:
-                self.quit()
-            elif event.type == KEYUP:
-                if event.key == K_ESCAPE:
+            elif self._game_state.get_state() == "game over":
+                if self._game_gui.new_game.get_rect().collidepoint(event.pos):
+                    self._sound.play_beep()
+                    self._game_state.set_state("welcome")
+                    self._sound.play_music()
+                    self._game_logic.start_again()
+                    self._game_state.start_again()
+                elif self._game_gui.quit.get_rect().collidepoint(event.pos):
                     self._sound.play_beep()
                     self.quit()
+                elif self._game_gui.play_again.get_rect().collidepoint(event.pos):
+                    self._sound.play_beep()
+                    self._game_state.new_game()
+                    self._game_logic.start_again()
+                    self._game_state.set_state("new game")
+        elif event.type == MOUSEMOTION or event.type == NOEVENT:
+            for button in self._game_gui.buttons:
+                button.set_bold(pygame.mouse.get_pos())
+        elif event.type == pygame.QUIT:
+            self.quit()
+        elif event.type == KEYUP:
+            if event.key == K_ESCAPE:
+                self._sound.play_beep()
+                self.quit()
 
 
 def key_for_min(pick):
