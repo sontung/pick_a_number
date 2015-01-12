@@ -1,0 +1,9 @@
+Choose which number to choose from the list displayed.
+You can only choose the first and the last number of the
+list by the first and last button on the screen.
+Each number you choose will be added to your score.
+Player who has the highest score is the winner.
+Remember the AI is designed to beat you so decide your
+strategy wisely and I wish you good luck.
+Btw, you can always press Esc button in your keyboard
+if you want to quit the game
